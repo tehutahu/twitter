@@ -1,0 +1,8 @@
+numpy
+pillow
+pyyaml
+requests
+torch
+torchvision
+tweepy
+selenium
