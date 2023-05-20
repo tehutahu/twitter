@@ -8,7 +8,6 @@ import yaml
 from get_hayate import GetHayate
 from line_notify import LineNotify
 
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 file_handler = logging.FileHandler('log/log.log')
@@ -41,12 +40,20 @@ def make_query(config: dict) -> str:
         query += ' exclude:retweets'
     return query
         
-def set_apis(twitter_token, line_token, model_path: str, save_path: str):
+def _set_apis(twitter_token, line_token, model_path: str, save_path: str):
     hayate = GetHayate(twitter_token, model_path, save_path)
     line_api = LineNotify(line_token['token'], line_token['notify_api'])
     return hayate, line_api
 
-def main(twitter_api, line_api, twitter_config: dict) -> None:
+def set_apis(twitter_token, line_token, model_path: str, save_path: str):
+    '''
+    Twitter API有料化による停止
+    '''
+    # hayate = GetHayate(twitter_token, model_path, save_path)
+    line_api = LineNotify(line_token['token'], line_token['notify_api'])
+    return None, line_api
+
+def _main(twitter_api, line_api, twitter_config: dict) -> None:
     query = make_query(twitter_config)
     items = twitter_config['items']
     logger.info({'action': 'main', 'config':twitter_config})
@@ -62,7 +69,25 @@ def main(twitter_api, line_api, twitter_config: dict) -> None:
         line_api.send(msg=msg, image=open(save_path, 'rb'))
         msg = ''
     logger.info({'action': 'main', 'status': 'success'})
+
+def main(twitter_api, line_api, twitter_config: dict) -> None:
+    # query = make_query(twitter_config)
+    # items = twitter_config['items']
+    # logger.info({'action': 'main', 'config':twitter_config})
     
+    line_api.send(msg=f'Hayate Botはサ終しました( \'ω\' )')
+    # tweets, save_paths = twitter_api.get_tweets(query=query, result_type='recent', items=items)
+    # idxs = [i for i in range(len(tweets)) if i % 5 == 0]
+    # idxs.reverse()
+    # for idx in idxs:
+    #     tweets.insert(idx, f'{"-"*25}')
+    # msg = '\n'.join(tweets)
+    # for save_path in save_paths:
+    #     line_api.send(msg=msg, image=open(save_path, 'rb'))
+    #     msg = ''
+    # logger.info({'action': 'main', 'status': 'success'})
+
+
 if __name__ == '__main__':
     args = parse()
 
