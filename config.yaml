@@ -1,7 +1,7 @@
 twitter:
-  words: "#久川颯 OR 久川颯 OR #久川凪 OR 久川凪"
+  words: "#久川颯 OR 久川颯 OR #久川凪 OR 久川凪 OR 久川姉妹"
   retweets_exclude: false
-  min_faves: 50
-  items: 50
-  save_path: grid.jpg
+  min_faves: 30
+  items: 100
+  save_path: image/
   

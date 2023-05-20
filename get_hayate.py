@@ -1,5 +1,7 @@
 import io
 import logging
+import os
+import traceback
 from typing import List
 from typing import Tuple
 
@@ -92,35 +94,47 @@ class GetHayate(object):
             result = False
         return result
         
-    def save_image_grid(self, images: List[JpegImageFile], size=(1280, 1280)) -> None:
-        def make_tensor(image: JpegImageFile, size=(1280, 1280)) -> torch.Tensor:
+    def save_image_grid(self, images: List[JpegImageFile], size=(1280, 1280)) -> List[str]:
+        def make_tensor(image: JpegImageFile, size=(240, 240)) -> torch.Tensor:
             tensor = torch.from_numpy(np.array(image).transpose(2, 0, 1))
             tensor = transforms.Resize(size)(tensor)
             return tensor
-
+        n_imgs = 25
+        paths = []
         tensors = list(map(make_tensor, images))
-        grid_arr = make_grid(tensors, nrow=10).numpy().transpose(1, 2, 0)
-        Image.fromarray(grid_arr).save(self.save_path)
+        for i in range(0, len(tensors), n_imgs):
+            path = os.path.join(self.save_path, f'{i}.png')
+            grid_arr = make_grid(tensors[i:i+n_imgs], nrow=5).numpy().transpose(1, 2, 0)
+            Image.fromarray(grid_arr).save(path)
+            paths.append(path)
         logger.info({'action': 'save_image_grid', 'status': 'success'})
+        return paths
     
     def get_tweets(self, query="#久川颯 OR 久川颯 exclude:retweets filter:images min_faves:50",
-                    result_type='mixed', items=100) -> List[str]:
+                    result_type='mixed', items=100) -> Tuple[List[str], List[str]]:
         tweets = []
         images = []
         for status in tweepy.Cursor(self.api.search_tweets, query, result_type=result_type).items(items):
-            if 'media' in status.entities:
-                tweet_url = status.entities['media'][0]['url']
-                image_url = status.entities['media'][0]['media_url']
-                response = requests.get(image_url, stream=True)
-                if response.status_code == 200:
-                    image = Image.open(io.BytesIO(response.raw.data)).convert('RGB')
-                    if self.is_user_original(image):
-                        tweets.append(tweet_url)
-                        images.append(image)
-                        logger.info({'action': 'inference', 'accept_url': tweet_url})
-                    else:
-                        logger.info({'action': 'inference', 'reject_url': tweet_url})
-        self.save_image_grid(images)
+            if hasattr(status, 'extended_entities') and 'media' in status.extended_entities:
+                for media in status.extended_entities['media']:
+                    tweet_url = media['url']
+                    # tweet_url = status.entities['media'][0]['url']
+                    image_url = media['media_url']
+                    # image_url = status.entities['media'][0]['media_url']
+                    response = requests.get(image_url, stream=True)
+                    if response.status_code == 200:
+                        try:
+                            image = Image.open(io.BytesIO(response.raw.data)).convert('RGB')
+                        except Exception:
+                            logger.error({'action': 'get_tweets', 'err': traceback.format_exc()}) 
+                            continue
+                        if self.is_user_original(image):
+                            tweets.append(tweet_url)
+                            images.append(image)
+                            logger.info({'action': 'get_tweets', 'accept_url': tweet_url})
+                        else:
+                            logger.info({'action': 'get_tweets', 'reject_url': tweet_url})
+        paths = self.save_image_grid(images)
         self.tweets = tweets
-        return tweets
+        return tweets, paths
     

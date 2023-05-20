@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 from typing import Tuple
 
 import yaml
@@ -51,9 +52,15 @@ def main(twitter_api, line_api, twitter_config: dict) -> None:
     logger.info({'action': 'main', 'config':twitter_config})
     
     line_api.send(msg=f'\n検索ワード：{query}\n検索数：{items}')
-    tweets = hayate.get_tweets(query=query, result_type='recent', items=items)
+    tweets, save_paths = twitter_api.get_tweets(query=query, result_type='recent', items=items)
+    idxs = [i for i in range(len(tweets)) if i % 5 == 0]
+    idxs.reverse()
+    for idx in idxs:
+        tweets.insert(idx, f'{"-"*25}')
     msg = '\n'.join(tweets)
-    line_api.send(msg=msg, image=open(save_path, 'rb'))
+    for save_path in save_paths:
+        line_api.send(msg=msg, image=open(save_path, 'rb'))
+        msg = ''
     logger.info({'action': 'main', 'status': 'success'})
     
 if __name__ == '__main__':
@@ -66,6 +73,7 @@ if __name__ == '__main__':
 
     twitter_config = config['twitter']
     save_path = twitter_config['save_path']
+    os.makedirs(save_path, exist_ok=True)
     
     twitter_token = secret['twitter']
     line_token = secret['line']
